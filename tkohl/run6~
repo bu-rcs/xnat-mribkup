@@ -1,0 +1,86 @@
+#!/usr/bin/perl
+@TMPFILES=split(/\n/,`find /cnc/DATA/tmp|grep IMA`);  # get list of IMA files in tmp
+chomp($rundate=`date`);
+$rundate=~s/\s/_/g;
+$rundate=~s/:/-/g;
+$logfile="runlog-".$rundate.".log";
+open(LOGFILE,">/cnc/scripts/logs/$logfile");   # log the run
+foreach $path (@TMPFILES){
+    # First get filename
+    print LOGFILE "[$path]\n";
+    chomp($filename=`basename $path`);
+    chomp($x=`dicom2 -t1 $path |grep Instance|grep Date`);
+    if($x=~/DA \[(.*)\]/){
+	$InstanceDate=$1;
+	# Get InstanceDate from file
+    }
+    # Now extract Investigator Name and Date from Filename 
+    chomp($file=`basename $path`); # Get Filename
+    if($file=~/^(.*)\.MR/){
+	$IDfromFilename=$1;
+	# Get ID from filename
+    }
+    if(($file=~/\.MR\.(INVESTIGATORS_[^\d]+)\./) || ($file=~/\.MR\.(EXTERNALUSERS_[^\d]+)\./)){ 
+	$InvestigatorFromFilename=$1;
+	# Get Investigator from filename
+    }
+    $newpath="/cnc/DATA/INVESTIGATORS/".$InvestigatorFromFilename."/".$IDfromFilename;
+    if(-e "$newpath"){ # if folder exists, check an existing IMA file within folder
+	print LOGFILE "Folder exists\n";
+	$x="";
+	opendir(D,"$newpath");
+	while($x!~/\.IMA/){
+	    $x=readdir(D);
+	}
+	closedir(D);
+	chomp($d=`dicom2 -t1 "$newpath/$x" |grep Instance|grep Date`);  # Get InstanceDate from existing file in this folder
+	if($d=~/DA \[(.*)\]/){
+	    $ExistingInstanceDate=$1;
+	}
+	print LOGFILE "Instance Date from Current File = $InstanceDate\n";
+	print LOGFILE "Instance Date from File in Directory = $ExistingInstanceDate\n";
+	if($InstanceDate ne $ExistingInstanceDate){ # if dates differ, create DUPLICATE folder to deposit tmpfile
+	    $newpath = $newpath."_DUPLICATE_SESSION_ID_".$InstanceDate;
+	    print LOGFILE "Duplicate Session to be created\n";
+	    if(-e "$newpath"){
+		print LOGFILE "DUPLICATE Folder exists\n";
+		if(-e "$newpath/$filename"){
+		    print LOGFILE "$newpath/$filename exists - going to delete\n";
+		    print LOGFILE "rm $newpath/$filename\n";
+		    `rm $newpath/$filename`;
+		}else{
+		    print LOGFILE "$newpath/$filename doesnt exist - moving\n";
+		    print LOGFILE "mv $path $newpath/$filename\n";
+		    `mv $path $newpath/$filename`;
+		}
+	    }else{
+		print LOGFILE "mkdir -p $newpath\n";
+		`mkdir -p $newpath`;
+		print LOGFILE "mv $path $newpath/$filename\n";
+		`mv $path $newpath/$filename`
+	    }		
+	}else{ # Dates are same
+	    if(-e "$newpath/$filename"){
+		print LOGFILE "Found $filename in $newpath\n";
+		print LOGFILE "Deleting this instead of moving.\n";
+		`rm $path`;
+	    }else{
+		print LOGFILE "File doesnt exist but directory does, so we move it\n";
+		print LOGFILE "mv $path $newpath/$filename\n";
+		 `mv $path $newpath/$filename`
+	    }
+	}
+    }else{
+	print LOGFILE "mkdir -p $newpath\n";
+	 `mkdir -p $newpath`;
+	# If the path doesn't exist, create it.
+        print LOGFILE "mv $path $newpath\n";
+         `mv $path $newpath/$filename`;
+    }
+    # after correct destination folder has been determined, move tmp file to it.
+    print LOGFILE "\n\n";
+}
+print LOGFILE `date`;
+print LOGFILE "Invoking maketar now\n";
+close(LOGFILE);
+`/cnc/scripts/maketar`;

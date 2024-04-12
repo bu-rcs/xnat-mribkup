@@ -1,0 +1,48 @@
+#!/usr/bin/perl
+chomp($date=`date`);
+$date=~s/\s/_/g;
+$logfile="tarlog-".$date.".txt";
+open(L,">/cnc/scripts/logs/$logfile");
+$base="/cnc/DATA/INVESTIGATORS";
+@OLD=split(/\n/,`cd /;find $base -mindepth 2 -maxdepth 2 -mtime +14 -type d`);
+$numdir=@OLD;
+print L "$numdir directories to process\n";
+foreach $dir (@OLD){
+	chomp($origcount=`find $dir |wc -l`);
+	$tarfile="$dir".".tar";
+        $ziptar = $tarfile.".gz";
+	if((!(-e "$ziptar")) && (!(-e "$tarfile"))){  # tarfile doesn't already exist
+	    $fulldir = $dir;
+	    $dir=~s/^\///;
+	    #
+	    print "[$origcount]\n";
+	    print L "[$origcount]\n";
+	    print "cd /;tar -cf $tarfile $dir\n";
+	    print L "cd /;tar -cf $tarfile $dir\n";
+	    `cd /;tar -cf $tarfile $dir`;
+	    #
+	    print "gzip $tarfile\n";
+	    print L "gzip $tarfile\n";
+	    `gzip $tarfile`;
+	    #
+	    $ziptar = $tarfile.".gz";
+	    chomp($tarcount=`tar ztf $ziptar |wc -l`);
+	    print "tar ztf $ziptar |wc -l\n";
+	    print "$tarcount\n";
+	    print L "tar ztf $ziptar |wc -l\n";
+	    print L "$tarcount\n";
+	    #
+	    if($tarcount == $origcount){   # only delete dir if tarfile is good
+		print "\\rm -rf $fulldir\n\n";
+		print L "\\rm -rf $fulldir\n\n";
+		`\\rm -rf $fulldir`;
+	    }else{
+		print "Problem with tarfile, not deleting $fulldir\n";
+		print L "Problem with tarfile, not deleting $fulldir\n";
+	    }
+	}else{
+	    print "$tarfile exists already\n";
+    	    print L "$tarfile exists already\n";
+	}
+}
+close(L);

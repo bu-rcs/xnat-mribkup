@@ -1,0 +1,1 @@
+mv /cygdrive/c/Medcom/temp/CDR_OFFLINE/*.* /cygdrive/z/DATA/tmp/

@@ -1,0 +1,127 @@
+#!/bin/bash
+###	BUCNC_DICOM_SORT.sh ###
+# BUCNC_DICOM_SORT.sh is an internal script for 
+# Boston University's Cognitivie Neuroimaging Center
+# developed to move DICOMs from BU CNC Restricted-Use
+# General Purpose Network Attached Storage (RU-GPNAS)
+# partition at /mnt/z/DATA/tmp into organized INVESTIGATOR
+# Directories in /mnt/z/DATA/INVESTIGATORS
+# For Troubleshooting and Support, please email help@scc.bu.edu
+# Author: Dustin Clark - January 24th, 2020
+
+## Set Working Directory: RUGPNAS_TMP_DIR ##
+# This will the be RU-GPNAS 'tmp' directory
+export RUGPNAS_TMP_DIR=/mnt/z/DATA/tmp
+export RUGPNAS_DATA_DIR=$(dirname $RUGPNAS_TMP_DIR)
+## Capture Present Investigators ##
+# This will discover and organize present DICOMs by Investigator
+INVESTIGATORS=$(ls $RUGPNAS_TMP_DIR | grep IMA | cut -d'.' -f3 | sort -u | grep INVESTIGATORS)
+EXTERNALUSERS=$(ls $RUGPNAS_TMP_DIR | grep IMA | cut -d'.' -f3 | sort -u | grep EXTERNALUSERS)
+
+### Function Definitions ###
+## Check if Session Name is Duplicated and Create Session Dir ##
+make_session_dir()
+{
+
+	orig_dir=$1
+	datetime=$2 
+	session=$(basename $orig_dir)
+	investigator_dir=$(dirname $orig_dir)
+	investigator=$(basename $investigator_dir)
+	
+    if [ ! -d $orig_dir ]; then
+
+		echo "New Session Found: $session"
+		echo "Making $orig_dir"
+		mkdir $orig_dir
+
+    elif [[ "$(ls $orig_dir | grep "$datetime")" != "" ]];then
+
+		echo "Existing Session Found"
+		echo "Session ID: $session"
+		echo "Session Datetime: $datetime"
+		echo "Investigator: $investigator"
+
+    else
+	
+		echo "WARNING: Session ID $SESSION from previous datetime exists for $investigator!!"
+		((i++))
+		SESSION_DIR=$investigator_dir/DUPLICATE_SESSID-${SESSION}_${i}
+		echo "Setting up DUPLICATE_SESSID-${SESSION}_${i} for $investigator"
+		make_session_dir $SESSION_DIR
+
+    fi
+}
+
+
+### --------------------- MAIN SCRIPT ----------------------- ###
+echo "Running: BUCNC_DICOM_MOVER.sh"
+echo "Running: Checking for DICOMs....."
+
+if [[ "$(ls $RUGPNAS_TMP_DIR | grep IMA)" != "" ]]; then
+	echo "DICOMs Found!"
+	
+	## Move DICOMS to Investigator Directory by Session ID ##
+	for INVESTIGATOR in ${INVESTIGATORS[@]} ${EXTERNALUSERS[@]} 
+	do
+	
+		# Define DICOM destination directory per by Investigator Name
+		export INVESTIGATORS_DIR=$RUGPNAS_DATA_DIR/INVESTIGATORS/$INVESTIGATOR
+			
+		## Search for and set up New Investigator ##
+		if [ -d $INVESTIGATORS_DIR ]
+		then
+			echo "Found INVESTIGATOR: $INVESTIGATOR"
+		else
+			echo "New Investigator Found: $INVESTIGATOR"
+			echo "Setting up: $INVESTIGATOR"
+			mkdir -p $INVESTIGATORS_DIR
+		fi
+	
+		## Setup Session ##
+		# Discover Session ID from present DICOMs
+		SESSIONS=$(ls $RUGPNAS_TMP_DIR | grep -w $INVESTIGATOR | grep -v REPORT | cut -d'.' -f1 | sort -u)
+		
+		for SESSION in ${SESSIONS[@]}
+		do
+			
+			# Define DICOM Destination per Session ID within Investigator Name
+			export SESSION_DIR=$INVESTIGATORS_DIR/$SESSION
+	
+			## Setup Session Dir ##
+			# Create DICOM Destination Directory & Check if Session ID from same date is Duplicated
+			DATETIMES=$(ls $RUGPNAS_TMP_DIR | grep -w $INVESTIGATOR | grep -v REPORT | grep -w $SESSION | cut -d'.' -f6-11 | sort -u)
+			
+			for DATETIME in ${DATETIMES[@]}
+			do 			
+								
+				make_session_dir $SESSION_DIR $DATETIME
+	
+				# Move DICOMs to DICOM Destination Directory
+				echo "Moving DICOMs for Session: ${SESSION}" 
+				echo "Moving DICOMs to: $SESSION_DIR"
+				echo $RUGPNAS_TMP_DIR/*${SESSION}.*.${DATETIME}.* | xargs mv -t $SESSION_DIR
+
+			done
+	
+	
+		done
+	
+	done
+
+else
+	echo "No DICOMs Found!"	
+fi	
+
+## Archive Subjects Older than 30 Days ##
+if [[ "$(find $RUGPNAS_DATA_DIR/INVESTIGATORS -maxdepth 2 -mindepth 2 -mtime +30)" != "" ]]
+then 
+	echo "Archiving..." 
+	find $RUGPNAS_DATA_DIR/INVESTIGATORS -maxdepth 2 -mindepth 2 -mtime +30 ! -name "*.tar.gz" -exec 7za a -sdel -t7z {}.7z {} \;
+else
+	echo "Archive up to date!"
+fi
+	
+echo "Finished."
+echo "Exiting..."
+
