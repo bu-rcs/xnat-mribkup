@@ -147,5 +147,5 @@ done
 
 # Log the completion of the process
 echo "$(date)" >> "$logfilepath"
-echo "Invoking maketar now" >> "$logfilepath"
-`/home/mribkup/xnat-mribkup/tkohl/maketar`;
+#echo "Invoking maketar now" >> "$logfilepath"
+#`/home/mribkup/xnat-mribkup/tkohl/maketar`;
