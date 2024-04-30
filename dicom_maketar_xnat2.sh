@@ -17,7 +17,7 @@ touch "$logfilepath"
 base="/cnc/DATA/INVESTIGATORS"
 
 # Find directories older than 14 days within the base directory
-OLD=$(find "$base" -mindepth 1 -maxdepth 1 -mtime +14 -type d)
+OLD=$(find "$base" -mindepth 2 -maxdepth 2 -mtime +14 -type d)
 
 #######################################################################
     # THIS IS FOR TESTING.
