@@ -42,7 +42,11 @@ while IFS= read -r dir; do
     # Define tar and gzipped tar file paths
     tarfile="${dir}.tar"
     ziptar="${tarfile}.gz"
-
+    
+    # Insert this checkpoint to make sure the correct level is being compressed
+    # Checkpoint: Wait for user input to continue
+    # read -rp "Press Enter to continue..."
+    
     # Check if tarfile or gzipped tarfile already exist
     if [[ ! -e "$ziptar" && ! -e "$tarfile" ]]; then
         fulldir="$dir"
