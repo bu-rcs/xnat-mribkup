@@ -1,0 +1,24 @@
+name: Filter large files from history
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  filter-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Filter large files
+        uses: git/git-filter-repo@v2
+        with:
+          args: --strip-blobs-bigger-than 50M --path mhorn/secondary_sort/LOGS
+
+      - name: Push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git push origin main --force
