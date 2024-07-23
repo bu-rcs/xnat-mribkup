@@ -37,7 +37,7 @@ print_disk_usage "$date" "$current" "$avail" "$perc" "$total"
 # this is where the XNAT APP and Images are saved
 # this is currently in production for xnat.bu.edu
 # Get disk usage
-usage=$(df -h /data-ro_1 | column -t)
+usage=$(df -h /data | column -t)
 date=$(date -I | tr -d '[:space:]')
 system="nas1:/ou/cilse-cnc"
 
@@ -56,7 +56,7 @@ print_disk_usage "$date" "$current" "$avail" "$perc" "$total"
 # actually not sure what utility this space serves
 # this is currently in production for xnat.bu.edu
 # Get disk usage
-usage=$(df -h /data-ro_2 | column -t)
+usage=$(df -h /data-ro | column -t)
 date=$(date -I | tr -d '[:space:]')
 system="nas2:/ou/cilse-cnc"
 

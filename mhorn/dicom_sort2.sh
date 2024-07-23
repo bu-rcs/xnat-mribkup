@@ -109,3 +109,15 @@ done
 # Log the completion of the process and indicate that maketar would be invoked
 echo "$(date)" >> "$logfilepath"
 echo "Invoking maketar now (this is a dry run, no actual changes will be made)" >> "$logfilepath"
+
+# send an email of the left behind sort count
+# Directory to count files in
+DIRECTORY="/cnc/DATA/tmp"
+# Count the files
+FILE_COUNT=$(ls -1 "$DIRECTORY" | wc -l)
+# Email details
+TO="mhorn@bu.edu"
+SUBJECT="File Count in $DIRECTORY"
+BODY="The number of files in $DIRECTORY is: $FILE_COUNT"
+# Send the email
+echo -e "Subject:$SUBJECT\n\n$BODY" | sendmail -v "$TO"

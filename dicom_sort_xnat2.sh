@@ -147,3 +147,15 @@ done
 
 # Log the completion of the process
 echo "$(date)" >> "$logfilepath"
+
+# send an email of the left behind sort count
+# Directory to count files in
+DIRECTORY="/cnc/DATA/tmp"
+# Count the files
+FILE_COUNT=$(ls -1 "$DIRECTORY" | wc -l)
+# Email details
+TO="xnat-admin@scv.bu.edu"
+SUBJECT="File Count in $DIRECTORY"
+BODY="The number of files in $DIRECTORY is: $FILE_COUNT"
+# Send the email
+echo -e "Subject:$SUBJECT\n\n$BODY" | sendmail -v "$TO"
