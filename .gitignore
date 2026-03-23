@@ -1,1 +1,3 @@
 mhorn/secondary_sort/LOGS/*.log
+cron.log
+*.bak
