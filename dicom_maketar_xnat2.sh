@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Set enviormental variables for dcmtk package
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+export PATH=$PATH:/home/mribkup/dcmtk/usr/bin
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/mribkup/dcmtk/usr/lib64
+export DCMDICTPATH=/home/mribkup/dcmtk/usr/share/dcmtk/dicom.dic
+
 # Get current date and time
 date=$(date +"%Y-%m-%d_%H-%M-%S")
 
@@ -33,22 +39,24 @@ echo "$numdir directories to process" &>> "$logfilepath"
 
 # Loop through each directory
 while IFS= read -r dir; do
+
     # Get original DICOM count in the directory
-    origcount=$(find "$dir" | wc -l)
+    origcount=$(find "$dir" -type f | wc -l)
 
     # Print DICOM count for study.
     echo "$origcount DICOMS to be processed" &>> "$logfilepath"
-    
+
     # Define tar and gzipped tar file paths
     tarfile="${dir}.tar"
     ziptar="${tarfile}.gz"
-    
+
     # Insert this checkpoint to make sure the correct level is being compressed
     # Checkpoint: Wait for user input to continue
     # read -rp "Press Enter to continue..."
-    
+
     # Check if tarfile or gzipped tarfile already exist
     if [[ ! -e "$ziptar" && ! -e "$tarfile" ]]; then
+
         fulldir="$dir"
 
         # Print commands for creating tarfile to log file
@@ -65,7 +73,7 @@ while IFS= read -r dir; do
         gzip "$tarfile"
 
         # Count files in gzipped tarfile
-        tarcount=$(tar ztf "$ziptar" | wc -l)
+        tarcount=$(tar -ztf "$ziptar" | wc -l)
 
         # Print DICOM count in converted tar.zip.
         echo "$tarcount DICOMS processed" &>> "$logfilepath"
@@ -83,7 +91,7 @@ while IFS= read -r dir; do
         # If tarfile already exists, print message to log file
         echo "$tarfile exists already. Check & Remove $fulldir mannually" &>> "$logfilepath"
     fi
-    
+
     # Add a separator between entries
     echo "--------------------------------------------------------" >> "$logfilepath"
 
