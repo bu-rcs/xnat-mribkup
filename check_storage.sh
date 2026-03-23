@@ -51,21 +51,3 @@ perc=$(echo $usage | awk '{print $12}')
 print_disk_usage "$date" "$current" "$avail" "$perc" "$total" &>> "$log_file"
 print_disk_usage "$date" "$current" "$avail" "$perc" "$total"
 
-# nas2:/ou/clice-cnc
-# this is an extra backup that is unused
-# actually not sure what utility this space serves
-# this is currently in production for xnat.bu.edu
-# Get disk usage
-usage=$(df -h /data-ro | column -t)
-date=$(date -I | tr -d '[:space:]')
-system="nas2:/ou/cilse-cnc"
-
-# Print to nas_check.log
-total=$(echo $usage | awk '{print $9}')
-current=$(echo $usage | awk '{print $10}')
-avail=$(echo $usage | awk '{print $11}')
-perc=$(echo $usage | awk '{print $12}')
-#echo "$date $current $avail $perc $total" &>> "$log_file"
-#printf "nas2:/ou/cilse-cnc USAGE: "
-print_disk_usage "$date" "$current" "$avail" "$perc" "$total" &>> "$log_file"
-print_disk_usage "$date" "$current" "$avail" "$perc" "$total"
