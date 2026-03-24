@@ -137,6 +137,9 @@ for series_dir in $SERIES_DIRS; do
             existing_dcm=$(find "$newpath/$series_dirname" -type f -name "*.dcm" | head -n 1)
             if [ -n "$existing_dcm" ]; then
                 ExistingInstanceDate=$(dcmdump +P "0008,0012" "$existing_dcm" | awk '{gsub(/[\[\]]/, "", $3); print $3}')
+                if [ -z "$ExistingInstanceDate" ]; then
+                    ExistingInstanceDate=$(dcmdump +P "0008,0020" "$existing_dcm" | awk '{gsub(/[\[\]]/, "", $3); print $3}')
+                fi
                 echo "Instance Date from Current Series = $DatefromHeader" >> "$logfilepath"
                 echo "Instance Date from Existing Series = $ExistingInstanceDate" >> "$logfilepath"
 
