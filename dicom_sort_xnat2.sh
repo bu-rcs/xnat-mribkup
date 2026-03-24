@@ -168,12 +168,29 @@ for series_dir in $SERIES_DIRS; do
                         fi
                     fi
                 else
-                    # Same date - series already archived, just remove from tmp
-                    echo "Series with same date already archived - removing from tmp" >> "$logfilepath"
-                    if $DRYRUN; then
-                        echo "[DRY RUN] Would execute: rm -rf \"$series_dir\"" >> "$logfilepath"
+                    # Same date - verify content before removing
+                    echo "Series with same date found - verifying content" >> "$logfilepath"
+                    
+                    if diff -qr "$series_dir" "$newpath/$series_dirname" > /dev/null 2>&1; then
+                        echo "Content verified identical - removing from tmp" >> "$logfilepath"
+                        if $DRYRUN; then
+                            echo "[DRY RUN] Would execute: rm -rf \"$series_dir\"" >> "$logfilepath"
+                        else
+                            rm -rf "$series_dir"
+                        fi
                     else
-                        rm -rf "$series_dir"
+                        echo "WARNING: Same date but different content!" >> "$logfilepath"
+                        
+                        newpath="${newpath}_DUPLICATE_CONTENT_MISMATCH_${DatefromHeader}"
+                        echo "Moving to: $newpath" >> "$logfilepath"
+                        
+                        if $DRYRUN; then
+                            echo "[DRY RUN] Would execute: mkdir -p \"$newpath\"" >> "$logfilepath"
+                            echo "[DRY RUN] Would execute: mv \"$series_dir\" \"$newpath/\"" >> "$logfilepath"
+                        else
+                            mkdir -p "$newpath"
+                            mv "$series_dir" "$newpath/"
+                        fi
                     fi
                 fi
             else
