@@ -73,7 +73,7 @@ while IFS= read -r dir; do
         gzip "$tarfile"
 
         # Count files in gzipped tarfile
-        tarcount=$(tar -ztf "$ziptar" | wc -l)
+        tarcount=$(tar -ztf "$ziptar" | grep -v '/$' | wc -l)
 
         # Print DICOM count in converted tar.zip.
         echo "$tarcount DICOMS processed" &>> "$logfilepath"
