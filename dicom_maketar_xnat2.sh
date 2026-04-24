@@ -88,8 +88,16 @@ while IFS= read -r dir; do
             echo "counts of DICOMS don't match in tar.zip - NOT DELETING $fulldir" &>> "$logfilepath"
         fi
     else
-        # If tarfile already exists, print message to log file
-        echo "$tarfile exists already. Check & Remove $fulldir mannually" &>> "$logfilepath"
+        # If tarfile already exists, check to see if it is an exact match to dir
+        # If it is an exact match, then remove the original directory.
+        echo "$tarfile exists already. Checking if archive and original directory match..." &>> "$logfilepath"
+        if ./check_archive_files.sh "$ziptar" "$dir" "*.dcm"; then
+            echo "Hashes match - DELETING $dir" &>> "$logfilepath"
+            rm -rf "$dir"
+        else
+            echo "Hash mismatch - NOT DELETING $dir" &>> "$logfilepath"
+            echo "$tarfile exists already. Check & Remove $fulldir manually" &>> "$logfilepath"
+        fi
     fi
 
     # Add a separator between entries

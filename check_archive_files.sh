@@ -21,7 +21,6 @@ mkdir -p "${TAR_CONTENTS}"
 tar -xf "$TAR_ARCHIVE" -C "${TAR_CONTENTS}" --strip-components=5
 
 echo "Generating hash list for original files matching '$WILDCARD'..."
-# Generate hashes for matching original files, storing relative paths
 (
 cd "$ORIGINAL_DIR"
 find . -type f -name "$WILDCARD" ! -name "*.tar.gz" | sort | while read -r file; do
@@ -30,7 +29,6 @@ done
 ) > "$ORIG_HASHES"
 
 echo "Generating hash list for files from tar extraction..."
-# Generate hashes for all files in tar_contents, using relative paths
 (
 cd "$TAR_CONTENTS"
 find . -type f | sort | while read -r file; do
@@ -38,9 +36,35 @@ find . -type f | sort | while read -r file; do
 done
 ) > "$TAR_HASHES"
 
-echo "Hashes present in both sets:"
-comm -12 <(sort "$ORIG_HASHES") <(sort "$TAR_HASHES")
+# Sort both files for comm comparison
+ORIG_SORTED="${TMPDIR}/orig_sorted.txt"
+TAR_SORTED="${TMPDIR}/tar_sorted.txt"
+sort "$ORIG_HASHES" > "$ORIG_SORTED"
+sort "$TAR_HASHES"  > "$TAR_SORTED"
 
-echo ""
-echo "Cleaning up..."
-#rm -rf "${TAR_CONTENTS}" "${ORIG_HASHES}" "${TAR_HASHES}"
+# Count lines in each
+orig_count=$(wc -l < "$ORIG_SORTED")
+tar_count=$(wc -l  < "$TAR_SORTED")
+
+echo "----------------------------------------"
+echo "Original file count : $orig_count"
+echo "Tar file count      : $tar_count"
+echo "----------------------------------------"
+
+# Lines only in original (should be 0)
+only_in_orig=$(comm -23 "$ORIG_SORTED" "$TAR_SORTED")
+
+# Lines only in tar (should be 0)
+only_in_tar=$(comm -13 "$ORIG_SORTED" "$TAR_SORTED")
+
+# Lines in both
+in_both=$(comm -12 "$ORIG_SORTED" "$TAR_SORTED")
+
+# Final verdict
+if [[ -z "$only_in_orig" && -z "$only_in_tar" && "$orig_count" -eq "$tar_count" ]]; then
+    echo "✅ PASS: All hashes match exactly. Safe to delete original."
+    exit 0
+else
+    echo "❌ FAIL: Hashes do not match. Do NOT delete original."
+    exit 1
+fi
