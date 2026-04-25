@@ -6,6 +6,9 @@ export PATH=$PATH:/home/mribkup/dcmtk/usr/bin
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/mribkup/dcmtk/usr/lib64
 export DCMDICTPATH=/home/mribkup/dcmtk/usr/share/dcmtk/dicom.dic
 
+# path to this scripts directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Get current date and time
 date=$(date +"%Y-%m-%d_%H-%M-%S")
 
@@ -64,7 +67,7 @@ while IFS= read -r dir; do
         echo "cd / && tar -cf $tarfile $dir" &>> "$logfilepath"
 
         # Create tarfile
-        cd / && tar -cf "$tarfile" "$dir"
+        (cd / && tar -cf "$tarfile" "$dir")
 
         # Print commands for gzipping tarfile to log file
         echo "gzip $tarfile" &>> "$logfilepath"
@@ -91,12 +94,12 @@ while IFS= read -r dir; do
         # If tarfile already exists, check to see if it is an exact match to dir
         # If it is an exact match, then remove the original directory.
         echo "$tarfile exists already. Checking if archive and original directory match..." &>> "$logfilepath"
-        if ./check_archive_files.sh "$ziptar" "$dir" "*.dcm"; then
+        if "${SCRIPT_DIR}/check_archive_files.sh" "$ziptar" "$dir" "*.dcm"; then
             echo "Hashes match - DELETING $dir" &>> "$logfilepath"
             rm -rf "$dir"
         else
             echo "Hash mismatch - NOT DELETING $dir" &>> "$logfilepath"
-            echo "$tarfile exists already. Check & Remove $fulldir manually" &>> "$logfilepath"
+            echo "$tarfile exists already. Check & Remove $dir manually" &>> "$logfilepath"
         fi
     fi
 
