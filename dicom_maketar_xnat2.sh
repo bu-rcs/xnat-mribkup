@@ -9,6 +9,18 @@ export DCMDICTPATH=/home/mribkup/dcmtk/usr/share/dcmtk/dicom.dic
 # path to this scripts directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Verify /cnc is actually mounted before doing any work. If the AD account
+# backing this CIFS mount is disabled/expired, /cnc silently reverts to an
+# empty local directory, and every failure below goes quietly to the local
+# cron mail spool instead of raising a real alert.
+if ! mountpoint -q /cnc || [[ ! -d /cnc/DATA || ! -d /cnc/LOGS ]]; then
+    ALERTMSG="ERROR: /cnc is not mounted (or missing expected subdirectories) on $(hostname -f 2>/dev/null || hostname) as of $(date). dicom_maketar_xnat2.sh aborted without processing any files. Check 'systemctl status cnc.mount' and the AD account status for the service account in /etc/credentials."
+    echo "$ALERTMSG" >&2
+    echo "$ALERTMSG" >> "$SCRIPT_DIR/mount_alerts.log"
+    echo -e "Subject:ALERT: /cnc not mounted - dicom_maketar_xnat2.sh aborted\n\n$ALERTMSG" | /sbin/sendmail -v "xnat-admin@scv.bu.edu"
+    exit 1
+fi
+
 # Get current date and time
 date=$(date +"%Y-%m-%d_%H-%M-%S")
 

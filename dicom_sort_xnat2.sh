@@ -2,6 +2,9 @@
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 # Script for processing DICOM files and organizing them based on certain criteria
 
+# path to this script's directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Check for dry-run flag
 DRYRUN=false
 if [[ "$1" == "--dryrun" ]]; then
@@ -13,6 +16,23 @@ fi
 export PATH=$PATH:/home/mribkup/dcmtk/usr/bin
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/mribkup/dcmtk/usr/lib64
 export DCMDICTPATH=/home/mribkup/dcmtk/usr/share/dcmtk/dicom.dic
+
+# Verify /cnc is actually mounted before doing any work. If the AD account
+# backing this CIFS mount is disabled/expired, /cnc silently reverts to an
+# empty local directory: every find/touch below then fails or returns
+# nothing, and the "files remaining" email at the end falsely reports 0,
+# as if everything had already been archived. Fail loudly instead.
+if ! mountpoint -q /cnc || [[ ! -d /cnc/DATA || ! -d /cnc/LOGS ]]; then
+    ALERTMSG="ERROR: /cnc is not mounted (or missing expected subdirectories) on $(hostname -f 2>/dev/null || hostname) as of $(date). dicom_sort_xnat2.sh aborted without processing any files. Check 'systemctl status cnc.mount' and the AD account status for the service account in /etc/credentials."
+    echo "$ALERTMSG" >&2
+    echo "$ALERTMSG" >> "$SCRIPT_DIR/mount_alerts.log"
+    if $DRYRUN; then
+        echo "[DRY RUN] Would send email to xnat-admin@scv.bu.edu with subject: ALERT: /cnc not mounted - dicom_sort_xnat2.sh aborted"
+    else
+        echo -e "Subject:ALERT: /cnc not mounted - dicom_sort_xnat2.sh aborted\n\n$ALERTMSG" | /sbin/sendmail -v "xnat-admin@scv.bu.edu"
+    fi
+    exit 1
+fi
 
 # Get list of directories containing DICOM files
 # Find all .dcm files, get their parent directories, and get unique list
