@@ -106,7 +106,7 @@ while IFS= read -r dir; do
         # If tarfile already exists, check to see if it is an exact match to dir
         # If it is an exact match, then remove the original directory.
         echo "$tarfile exists already. Checking if archive and original directory match..." &>> "$logfilepath"
-        if "${SCRIPT_DIR}/check_archive_files.sh" "$ziptar" "$dir" "*.dcm"; then
+        if "${SCRIPT_DIR}/check_archive_files.sh" "$ziptar" "$dir" "*.dcm" "*.IMA"; then
             echo "Hashes match - DELETING $dir" &>> "$logfilepath"
             rm -rf "$dir"
         else

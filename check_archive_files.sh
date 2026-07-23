@@ -1,12 +1,28 @@
 #!/bin/bash
 
-# Usage: ./compare_filtered_files.sh /path/to/archive.tar.gz /path/to/original_dir "*.wildcard"
+# Usage: ./check_archive_files.sh /path/to/archive.tar.gz /path/to/original_dir "*.wildcard1" ["*.wildcard2" ...]
 
 set -e
 
 TAR_ARCHIVE="$1"
 ORIGINAL_DIR="$2"
-WILDCARD="$3"
+shift 2
+PATTERNS=("$@")
+
+if [ ${#PATTERNS[@]} -eq 0 ]; then
+    echo "ERROR: at least one filename wildcard pattern is required (e.g. \"*.dcm\")" >&2
+    exit 2
+fi
+
+# Build a single `-name X -o -name Y ...` find expression from PATTERNS so
+# the identical filter is applied to BOTH sides of the comparison below.
+FIND_NAME_ARGS=()
+for pattern in "${PATTERNS[@]}"; do
+    if [ ${#FIND_NAME_ARGS[@]} -gt 0 ]; then
+        FIND_NAME_ARGS+=( -o )
+    fi
+    FIND_NAME_ARGS+=( -name "$pattern" )
+done
 
 TMPDIR="/cnc/tmp"
 TAR_CONTENTS="${TMPDIR}/tar_contents"
@@ -20,18 +36,18 @@ mkdir -p "${TAR_CONTENTS}"
 # Extract all files from tar to tar_contents
 tar -xf "$TAR_ARCHIVE" -C "${TAR_CONTENTS}" --strip-components=5
 
-echo "Generating hash list for original files matching '$WILDCARD'..."
+echo "Generating hash list for original files matching '${PATTERNS[*]}'..."
 (
 cd "$ORIGINAL_DIR"
-find . -type f -name "$WILDCARD" ! -name "*.tar.gz" | sort | while read -r file; do
+find . -type f \( "${FIND_NAME_ARGS[@]}" \) ! -name "*.tar.gz" | sort | while read -r file; do
     sha256sum "$file"
 done
 ) > "$ORIG_HASHES"
 
-echo "Generating hash list for files from tar extraction..."
+echo "Generating hash list for files from tar extraction matching '${PATTERNS[*]}'..."
 (
 cd "$TAR_CONTENTS"
-find . -type f | sort | while read -r file; do
+find . -type f \( "${FIND_NAME_ARGS[@]}" \) ! -name "*.tar.gz" | sort | while read -r file; do
     sha256sum "$file"
 done
 ) > "$TAR_HASHES"
