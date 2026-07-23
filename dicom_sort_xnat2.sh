@@ -145,6 +145,24 @@ for series_dir in $SERIES_DIRS; do
     newpath=${newpath_prefix}${InvestigatorfromHeader}/${IDfromHeader}
     echo "Target path: $newpath" >> "$logfilepath"
 
+    # Some subject IDs (e.g. generic scanner QA IDs like "MR166024" or "test")
+    # are reused across genuinely unrelated sessions. If dicom_maketar_xnat2.sh
+    # already archived-and-deleted a prior session under this exact ID (leaving
+    # a .tar/.tar.gz with no accompanying live directory), redirect this
+    # incoming session up front so it never gets dumped into a freshly created
+    # $newpath sitting next to a stale, unrelated archive.
+    # NOTE: if a THIRD generation of this same recycled ID reuses the exact
+    # same DatefromHeader as an already-redirected second generation, this
+    # single-level check won't catch it; that (compound, currently
+    # unobserved) case will still surface visibly as a "Hash mismatch - NOT
+    # DELETING" line in dicom_maketar_xnat2.sh's log, same as today, just
+    # against the suffixed path instead of the base path.
+    if [[ ! -d "$newpath" ]] && [[ -e "${newpath}.tar.gz" || -e "${newpath}.tar" ]]; then
+        echo "Archive already exists for $newpath but no live directory - subject ID may be reused for a new session" >> "$logfilepath"
+        newpath="${newpath}_DUPLICATE_SESSION_ID_${DatefromHeader}"
+        echo "Redirecting to: $newpath" >> "$logfilepath"
+    fi
+
     # Check if the subject folder exists
     if [[ -d "$newpath" ]]; then
         echo "Subject folder exists" >> "$logfilepath"
